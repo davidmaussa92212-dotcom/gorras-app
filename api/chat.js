@@ -6,8 +6,8 @@ export default async function handler(req, res) {
   const { pregunta } = req.body;
 
   try {
-    // AQUÍ ESTÁ LA CORRECCIÓN: Agregamos "-latest" al nombre del modelo
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    // Usaremos 'gemini-pro', que es la versión universal y más estable
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const respuestaIA = await fetch(url, {
       method: "POST",
