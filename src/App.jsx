@@ -29,22 +29,25 @@ const BRANDS = [
   { id: "zalando", name: "Zalando ES", flag: "🇪🇸", color: "#f472b6", site: "zalando.es", saleUrl: "https://www.zalando.es/gorras-y-sombreros-hombre/" },
 ];
 
-// ─── Claude API call ──────────────────────────────────────────────
-async function askClaude(prompt, onChunk) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  const data = await res.json();
-  const text = data.content?.filter(b => b.type === "text").map(b => b.text).join("\n") || "";
-  onChunk(text);
-  return text;
+// ─── Backend API call (Vercel) ────────────────────────────────────
+// Esta función reemplaza la llamada directa a Claude y ahora se conecta a tu api/chat.js
+async function preguntarAlBackend(prompt, onChunk) {
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pregunta: prompt }),
+    });
+    const data = await res.json();
+    const text = data.respuesta || "No se recibió respuesta del servidor.";
+    onChunk(text);
+    return text;
+  } catch (error) {
+    console.error("Error conectando al backend:", error);
+    const errText = "Hubo un error al conectar con tu servidor en Vercel.";
+    onChunk(errText);
+    return errText;
+  }
 }
 
 // ─── Shared styles ────────────────────────────────────────────────
@@ -193,6 +196,17 @@ function TabPrecios() {
 
   const brand = BRANDS.find(b => b.id === selected);
 
+  // Nueva función para llamar a api/descuentos.js en Vercel
+  async function actualizarScraper() {
+    try {
+      const respuesta = await fetch('/api/descuentos', { method: 'POST' });
+      const datos = await respuesta.json();
+      alert(datos.mensaje);
+    } catch (error) {
+      alert('Error al intentar buscar descuentos en segundo plano.');
+    }
+  }
+
   async function buscar() {
     setLoading(true);
     setResult("");
@@ -204,7 +218,7 @@ Necesito:
 4. Precio mínimo y máximo actual en el sale
 
 Responde en español, de forma concisa con bullets. Incluye los precios en USD o EUR según corresponda. Fecha de hoy: ${new Date().toLocaleDateString('es-CO')}.`;
-    await askClaude(prompt, (txt) => setResult(txt));
+    await preguntarAlBackend(prompt, (txt) => setResult(txt));
     setLoading(false);
     setLastFetch(new Date().toLocaleTimeString('es-CO'));
   }
@@ -234,9 +248,15 @@ Responde en español, de forma concisa con bullets. Incluye los precios en USD o
           </a>
         </div>
 
-        <button style={s.btn("primary")} onClick={buscar} disabled={loading}>
-          {loading ? "⏳ Buscando descuentos..." : "🔍 Buscar descuentos ahora"}
-        </button>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button style={s.btn("primary")} onClick={buscar} disabled={loading}>
+            {loading ? "⏳ Buscando en BD..." : "🔍 Buscar descuentos guardados"}
+          </button>
+          
+          <button style={s.btn("secondary")} onClick={actualizarScraper}>
+            🔄 Actualizar Scraper Oculto
+          </button>
+        </div>
 
         {lastFetch && (
           <div style={{ fontSize: 10, color: C.textTertiary, marginTop: 8 }}>
@@ -247,7 +267,7 @@ Responde en español, de forma concisa con bullets. Incluye los precios en USD o
         {(loading || result) && (
           <div style={s.streamBox}>
             {loading && !result ? (
-              <span style={{ color: C.accent }}>● Buscando en {brand.site}...</span>
+              <span style={{ color: C.accent }}>● Conectando con Vercel...</span>
             ) : result}
           </div>
         )}
@@ -310,7 +330,7 @@ Análisis de mi compra:
 - Ganancia total (${form.unidades} gorras): $${f(ganTotal)} COP
 
 Dame en 3 bullets cortos: (1) si este margen es bueno o mejorable para este negocio en Colombia, (2) un consejo para mejorar el margen, (3) el precio de venta óptimo sugerido para Medellín. Sé muy directo y concreto.`;
-    await askClaude(prompt, setAiTip);
+    await preguntarAlBackend(prompt, setAiTip);
     setLoadingAi(false);
   }
 
@@ -412,7 +432,7 @@ function TabInventario() {
     setAiConsejo("");
     const resumen = items.map(it => `${it.nombre} (${it.marca}): stock=${it.stock}, vendidas=${it.vendidas}, costo=$${f(it.costo)}, precio=$${f(it.precio)}`).join("; ");
     const prompt = `Soy revendedor de gorras en Medellín. Mi inventario actual: ${resumen}. Total invertido: $${f(totalInvertido)} COP. Ganancia hasta ahora: $${f(ganancia)} COP. Dame 2 consejos muy concretos sobre qué hacer con este inventario para maximizar mis ganancias esta semana.`;
-    await askClaude(prompt, setAiConsejo);
+    await preguntarAlBackend(prompt, setAiConsejo);
     setLoadingAi(false);
   }
 
@@ -540,7 +560,7 @@ function TabAsesor() {
     setMsgs(m => [...m, { role: "user", text: userMsg }]);
     setLoading(true);
     const prompt = `Eres un asesor experto en el negocio de gorras originales (New Era, Hugo Boss, Lids) en Colombia, específicamente en Medellín. El usuario es un emprendedor que quiere ser revendedor y distribuidor mayorista de gorras originales importadas desde USA y España, enfocado en adolescentes. Responde de forma concisa, práctica y en español colombiano. Pregunta: ${userMsg}`;
-    await askClaude(prompt, (txt) => {
+    await preguntarAlBackend(prompt, (txt) => {
       setMsgs(m => {
         const last = m[m.length - 1];
         if (last?.role === "ai-stream") return [...m.slice(0, -1), { role: "ai-stream", text: txt }];
