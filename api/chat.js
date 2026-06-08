@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Solo permitimos peticiones POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido' });
   }
@@ -7,8 +6,8 @@ export default async function handler(req, res) {
   const { pregunta } = req.body;
 
   try {
-    // Aquí hacemos la llamada REAL a la IA gratuita de Google (Gemini 1.5 Flash)
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    // AQUÍ ESTÁ LA CORRECCIÓN: Agregamos "-latest" al nombre del modelo
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
     const respuestaIA = await fetch(url, {
       method: "POST",
@@ -24,7 +23,7 @@ export default async function handler(req, res) {
 
     const data = await respuestaIA.json();
 
-    // Verificamos si hubo un error con tu API Key
+    // Verificamos si hubo un error de Google
     if (data.error) {
       console.error(data.error);
       return res.status(500).json({ respuesta: `Error de la IA: ${data.error.message}` });
