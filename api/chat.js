@@ -7,18 +7,18 @@ export default async function handler(req, res) {
   const { pregunta } = req.body;
 
   try {
-    // Aquí hacemos la llamada REAL a la Inteligencia Artificial (Claude)
-    const respuestaIA = await fetch("https://api.anthropic.com/v1/messages", {
+    // Aquí hacemos la llamada REAL a la IA gratuita de Google (Gemini 1.5 Flash)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+    const respuestaIA = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.CLAUDE_API_KEY, // Tu clave secreta protegida en Vercel
-        "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20240620", // El modelo más reciente y rápido de Claude
-        max_tokens: 1000,
-        messages: [{ role: "user", content: pregunta }],
+        contents: [{
+          parts: [{ text: pregunta }]
+        }]
       }),
     });
 
@@ -30,8 +30,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ respuesta: `Error de la IA: ${data.error.message}` });
     }
 
-    // Extraemos el texto de la respuesta de Claude
-    const textoFinal = data.content[0].text;
+    // Extraemos el texto de la respuesta de Gemini
+    const textoFinal = data.candidates[0].content.parts[0].text;
 
     // Enviamos la respuesta real a tu página web
     return res.status(200).json({ respuesta: textoFinal });
