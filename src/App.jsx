@@ -30,13 +30,9 @@ const BRANDS = [
 function formatearTexto(texto) {
   if (!texto) return "";
   let html = texto
-    // 1. Convierte ![nombre](url) en una FOTO real
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<div style="margin: 10px 0;"><img src="$2" alt="$1" style="max-width: 140px; border-radius: 8px; border: 1px solid #2a2a30; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"/></div>')
-    // 2. Convierte [texto](url) en un BOTÓN/LINK de compra
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="display: inline-block; margin-top: 5px; color: #0a0a0b; background-color: #f0c040; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 12px;">$1 🛒</a>')
-    // 3. Convierte **texto** en Negritas
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #f0eff4; font-size: 14px;">$1</strong>')
-    // 4. Saltos de línea
     .replace(/\n/g, '<br/>');
     
   return html;
@@ -84,7 +80,7 @@ const s = {
   chip: (color, active) => ({ padding: "6px 12px", borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer", border: `1px solid ${active ? color : C.border}`, background: active ? color + "22" : "transparent", color: active ? color : C.textSecondary }),
 };
 
-// ─── Tab: Precios en Tiempo Real ──────────────────────────────────
+// ─── Tab 1: Precios en Tiempo Real ──────────────────────────────────
 function TabPrecios() {
   const [selected, setSelected] = useState("newera");
   const [loading, setLoading] = useState(false);
@@ -100,9 +96,8 @@ function TabPrecios() {
     setLoading(true);
     setResult("");
     
-    // LA INSTRUCCIÓN ESTRICTA PARA LA IA (Sin saludos, solo datos duros)
     const prompt = `Eres un sistema automático. Ignora saludos o introducciones. Genera una lista de 3 gorras marca ${brand.name} que suelan estar en descuento. 
-    Usa ESTRICTAMENTE este formato para cada gorra (es vital que incluyas las exclamaciones y corchetes tal cual para que el sistema las lea):
+    Usa ESTRICTAMENTE este formato para cada gorra:
     
     **[Nombre del Modelo y Color]** - [Descuento estimado o precio]
     ![Foto] (URL_DE_IMAGEN_DE_GORRA_REAL_EN_INTERNET)
@@ -149,7 +144,6 @@ function TabPrecios() {
             {loading && !result ? (
               <span style={{ color: C.accent }}>● Generando visualización...</span>
             ) : (
-              /* AQUÍ SE HACE LA MAGIA: Traduce el texto a HTML con imágenes y botones */
               <div dangerouslySetInnerHTML={{ __html: formatearTexto(result) }} />
             )}
           </div>
@@ -159,9 +153,37 @@ function TabPrecios() {
   );
 }
 
-// ─── Tab: Asesor IA (Minimal) ─────────────────────────────────────
+// ─── Tab 2: Calculadora de Margen ──────────────────────────────────
+function TabCalculadora() {
+  return (
+    <div style={s.card}>
+      <p style={s.sectionTitle}>Calculadora de Rentabilidad</p>
+      <div style={{ color: C.textSecondary, fontSize: 13, lineHeight: 1.6 }}>
+        <p>Esta sección está lista para integrar tu lógica de cálculo de márgenes y ganancias.</p>
+        <br/>
+        <p><em>(Aquí volverán a estar los inputs de Precio de Compra, Envío y Precio de Venta sugerido).</em></p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab 3: Inventario ─────────────────────────────────────────────
+function TabInventario() {
+  return (
+    <div style={s.card}>
+      <p style={s.sectionTitle}>Gestión de Inventario</p>
+      <div style={{ color: C.textSecondary, fontSize: 13, lineHeight: 1.6 }}>
+        <p>Tu sistema de control de stock de gorras.</p>
+        <br/>
+        <p><em>(Aquí se mostrarán las gorras que tienes actualmente en Medellín y las que vienen en camino).</em></p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab 4: Asesor IA ──────────────────────────────────────────────
 function TabAsesor() {
-  const [msgs, setMsgs] = useState([{ role: "ai", text: "Hola, soy tu asesor. Pregúntame lo que sea." }]);
+  const [msgs, setMsgs] = useState([{ role: "ai", text: "Hola, soy tu asesor. Pregúntame lo que sea sobre los descuentos o tu negocio." }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -182,7 +204,6 @@ function TabAsesor() {
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 12 }}>
         {msgs.map((m, i) => (
           <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%", background: m.role === "user" ? C.accent : C.card, color: m.role === "user" ? "#0a0a0b" : C.textPrimary, padding: "10px 14px", borderRadius: "8px", fontSize: 13 }}>
-            {/* El asesor también usa el traductor visual por si te manda links */}
             <div dangerouslySetInnerHTML={{ __html: formatearTexto(m.text) }} />
           </div>
         ))}
@@ -199,6 +220,8 @@ function TabAsesor() {
 // ─── Root App ─────────────────────────────────────────────────────
 const TABS = [
   { id: "precios", label: "🔍 Precios", comp: TabPrecios },
+  { id: "calc", label: "📊 Margen", comp: TabCalculadora },
+  { id: "inv", label: "📦 Inventario", comp: TabInventario },
   { id: "asesor", label: "🤖 Asesor IA", comp: TabAsesor },
 ];
 
@@ -214,6 +237,7 @@ export default function App() {
           <div style={s.logoIcon}>🧢</div>
           <div>
             <div style={s.logoText}>CapTracker</div>
+            <div style={s.logoSub}>Tu negocio de gorras · Medellín</div>
           </div>
         </div>
         <div style={s.nav}>
